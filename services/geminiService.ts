@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { ResearchReport, GroundingSource } from "../types";
+import { ResearchReport, GroundingSource } from "../types.ts";
 
 const SYSTEM_INSTRUCTION = `
 あなたはプロフェッショナルなリサーチアナリストです。Google Searchツールを駆使し、ユーザーの問いに対して表層的な回答ではなく、多角的な視点から深掘りした「ディープ・サーチ・レポート」を提供してください。

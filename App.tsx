@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { performDeepResearch } from './services/geminiService';
-import { ResearchReport, AppState } from './types';
+import { performDeepResearch } from './services/geminiService.ts';
+import { ResearchReport, AppState } from './types.ts';
 
 // Components
 const Header: React.FC = () => (
