@@ -67,8 +67,12 @@ export const performDeepResearch = async (query: string): Promise<ResearchReport
       sources: uniqueSources,
       timestamp: Date.now()
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
+    // Propagate more specific error messages for 429
+    if (error?.message && (error.message.includes("429") || error.message.toLowerCase().includes("quota"))) {
+      throw new Error("429: API rate limit exceeded.");
+    }
     throw error;
   }
 };

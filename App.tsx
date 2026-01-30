@@ -13,18 +13,43 @@ const Header: React.FC = () => (
         </div>
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Deep Analyst</h1>
       </div>
-      <div className="hidden sm:flex items-center gap-4 text-slate-500 text-sm">
-        <span className="flex items-center gap-1">
-          <i className="fa-solid fa-bolt text-indigo-500"></i>
-          Gemini 3 Flash
-        </span>
-        <span className="flex items-center gap-1">
-          <i className="fa-brands fa-google text-indigo-500"></i>
-          Search Grounding
-        </span>
+      <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-100">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          </span>
+          Free Tier
+        </div>
+        <div className="hidden sm:flex items-center gap-4 text-slate-500 text-sm">
+          <span className="flex items-center gap-1">
+            <i className="fa-solid fa-bolt text-indigo-500"></i>
+            Flash
+          </span>
+          <span className="flex items-center gap-1">
+            <i className="fa-brands fa-google text-indigo-500"></i>
+            Search
+          </span>
+        </div>
       </div>
     </div>
   </header>
+);
+
+const UsageNotice: React.FC = () => (
+  <div className="max-w-4xl mx-auto mt-4 px-4">
+    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 items-start">
+      <i className="fa-solid fa-circle-info text-blue-500 mt-1"></i>
+      <div className="text-xs text-blue-800 leading-relaxed">
+        <p className="font-bold mb-1">【利用上の注意】本アプリはGoogle AI Studioの無料枠で動作しています：</p>
+        <ul className="list-disc ml-4 space-y-0.5 opacity-90">
+          <li><strong>回数制限:</strong> 短時間に連続して実行すると、一時的に利用できなくなる場合があります（Rate Limit）。</li>
+          <li><strong>プライバシー:</strong> 無料枠のAPIポリシーにより、入力内容はGoogleのサービス改善（モデルの学習等）に使用される可能性があります。機密情報の入力は控えてください。</li>
+          <li><strong>検索結果:</strong> Google Search Groundingを使用しており、最新情報を反映しますが、常に100%の正確性を保証するものではありません。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 );
 
 const SearchBar: React.FC<{ onSearch: (query: string) => void, loading: boolean }> = ({ onSearch, loading }) => {
@@ -48,7 +73,7 @@ const SearchBar: React.FC<{ onSearch: (query: string) => void, loading: boolean 
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="深い調査や分析が必要なトピックを入力してください..."
+          placeholder="調査したいトピックを入力（例：最新の半導体市場動向）"
           className="block w-full pl-12 pr-24 py-5 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 placeholder-slate-400 transition-all outline-none"
           disabled={loading}
         />
@@ -370,10 +395,14 @@ const App: React.FC = () => {
         loading: false
       }));
     } catch (err: any) {
+      let errorMessage = "予期せぬエラーが発生しました。接続を確認してください。";
+      if (err.message && err.message.includes("429")) {
+        errorMessage = "【制限エラー】無料枠の利用制限（リクエスト過多）に達しました。数分待ってから再度お試しください。";
+      }
       setState(prev => ({
         ...prev,
         loading: false,
-        error: err.message || "予期せぬエラーが発生しました。接続を確認してください。"
+        error: errorMessage
       }));
     }
   }, []);
@@ -410,6 +439,7 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
+      <UsageNotice />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 
           reports={state.reports} 
