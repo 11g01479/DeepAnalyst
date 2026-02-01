@@ -3,8 +3,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { performDeepResearch } from './services/geminiService.ts';
 import { ResearchReport, AppState } from './types.ts';
 
+const DAILY_LIMIT = 1500; // Gemini Flash Free Tier Daily Limit
+
 // Components
-const Header: React.FC = () => (
+const Header: React.FC<{ remaining: number }> = ({ remaining }) => (
   <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -13,22 +15,28 @@ const Header: React.FC = () => (
         </div>
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Deep Analyst</h1>
       </div>
-      <div className="flex items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-100">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-          </span>
-          Free Tier
+      <div className="flex items-center gap-3 sm:gap-6">
+        <div className="flex flex-col items-end">
+          <div className="flex items-center gap-2 mb-1">
+             <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-100">
+              Free Tier
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Remaining</span>
+            <span className={`text-sm font-mono font-bold ${remaining < 50 ? 'text-red-500' : 'text-indigo-600'}`}>
+              {remaining.toLocaleString()}
+            </span>
+          </div>
+          <div className="w-32 h-1 bg-slate-100 rounded-full overflow-hidden hidden sm:block">
+            <div 
+              className={`h-full transition-all duration-500 ${remaining < 50 ? 'bg-red-500' : 'bg-indigo-500'}`}
+              style={{ width: `${(remaining / DAILY_LIMIT) * 100}%` }}
+            ></div>
+          </div>
         </div>
-        <div className="hidden sm:flex items-center gap-4 text-slate-500 text-sm">
+        <div className="hidden md:flex items-center gap-4 text-slate-500 text-sm border-l border-slate-100 pl-6">
           <span className="flex items-center gap-1">
             <i className="fa-solid fa-bolt text-indigo-500"></i>
             Flash
-          </span>
-          <span className="flex items-center gap-1">
-            <i className="fa-brands fa-google text-indigo-500"></i>
-            Search
           </span>
         </div>
       </div>
@@ -38,26 +46,26 @@ const Header: React.FC = () => (
 
 const UsageNotice: React.FC = () => (
   <div className="max-w-4xl mx-auto mt-4 px-4">
-    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 items-start">
+    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 items-start shadow-sm">
       <i className="fa-solid fa-circle-info text-blue-500 mt-1"></i>
       <div className="text-xs text-blue-800 leading-relaxed">
-        <p className="font-bold mb-1">【利用上の注意】本アプリはGoogle AI Studioの無料枠で動作しています：</p>
+        <p className="font-bold mb-1">【利用制限について】</p>
         <ul className="list-disc ml-4 space-y-0.5 opacity-90">
-          <li><strong>回数制限:</strong> 短時間に連続して実行すると、一時的に利用できなくなる場合があります（Rate Limit）。</li>
-          <li><strong>プライバシー:</strong> 無料枠のAPIポリシーにより、入力内容はGoogleのサービス改善（モデルの学習等）に使用される可能性があります。機密情報の入力は控えてください。</li>
-          <li><strong>検索結果:</strong> Google Search Groundingを使用しており、最新情報を反映しますが、常に100%の正確性を保証するものではありません。</li>
+          <li><strong>リクエスト制限:</strong> 1日最大1,500回（および1分間15回）まで実行可能です。</li>
+          <li><strong>データの取り扱い:</strong> 無料枠では、入力内容はモデルの改善に使用される場合があります。機密情報は入力しないでください。</li>
+          <li><strong>リセット:</strong> 利用回数は毎日午前0時にリセットされます（推定）。</li>
         </ul>
       </div>
     </div>
   </div>
 );
 
-const SearchBar: React.FC<{ onSearch: (query: string) => void, loading: boolean }> = ({ onSearch, loading }) => {
+const SearchBar: React.FC<{ onSearch: (query: string) => void, loading: boolean, remaining: number }> = ({ onSearch, loading, remaining }) => {
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim() && !loading) {
+    if (query.trim() && !loading && remaining > 0) {
       onSearch(query.trim());
       setQuery('');
     }
@@ -73,13 +81,13 @@ const SearchBar: React.FC<{ onSearch: (query: string) => void, loading: boolean 
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="調査したいトピックを入力（例：最新の半導体市場動向）"
+          placeholder={remaining > 0 ? "調査したいトピックを入力..." : "本日の利用上限に達しました"}
           className="block w-full pl-12 pr-24 py-5 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 placeholder-slate-400 transition-all outline-none"
-          disabled={loading}
+          disabled={loading || remaining <= 0}
         />
         <button
           type="submit"
-          disabled={loading || !query.trim()}
+          disabled={loading || !query.trim() || remaining <= 0}
           className="absolute right-3 inset-y-2 px-5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
         >
           {loading ? '分析中...' : '調査開始'}
@@ -97,7 +105,10 @@ const Sidebar: React.FC<{
 }> = ({ reports, onSelect, onDelete, currentId }) => (
   <div className="w-64 bg-slate-50 border-r border-slate-200 hidden lg:block overflow-y-auto">
     <div className="p-4">
-      <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">リサーチ履歴</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">リサーチ履歴</h2>
+        <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-bold">{reports.length}</span>
+      </div>
       <div className="space-y-1">
         {reports.length === 0 ? (
           <p className="text-sm text-slate-400 italic">履歴はありません</p>
@@ -176,7 +187,7 @@ const ReportView: React.FC<{
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mt-8 mb-20">
+    <div className="max-w-4xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mt-8 mb-20 animate-in fade-in zoom-in-95 duration-500">
       <div className="p-8 border-b border-slate-100 bg-slate-50">
         <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
           <div className="flex gap-2">
@@ -196,7 +207,6 @@ const ReportView: React.FC<{
                 <div className="flex bg-white border border-slate-200 rounded-lg p-1">
                   <button 
                     onClick={() => downloadFile('md')}
-                    title="Markdown形式で保存"
                     className="p-2 hover:bg-slate-100 text-slate-600 rounded flex items-center gap-2 text-sm border-r border-slate-100"
                   >
                     <i className="fa-solid fa-file-code text-indigo-500"></i>
@@ -204,7 +214,6 @@ const ReportView: React.FC<{
                   </button>
                   <button 
                     onClick={() => downloadFile('txt')}
-                    title="テキスト形式で保存"
                     className="p-2 hover:bg-slate-100 text-slate-600 rounded flex items-center gap-2 text-sm"
                   >
                     <i className="fa-solid fa-file-lines text-slate-400"></i>
@@ -380,11 +389,35 @@ const App: React.FC = () => {
     }
   });
 
+  const [usageCount, setUsageCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('deep_analyst_usage');
+      const today = new Date().toDateString();
+      if (saved) {
+        const { count, date } = JSON.parse(saved);
+        if (date === today) return count;
+      }
+      return 0;
+    } catch (e) {
+      return 0;
+    }
+  });
+
   useEffect(() => {
     localStorage.setItem('deep_analyst_reports', JSON.stringify(state.reports));
   }, [state.reports]);
 
+  useEffect(() => {
+    const today = new Date().toDateString();
+    localStorage.setItem('deep_analyst_usage', JSON.stringify({ count: usageCount, date: today }));
+  }, [usageCount]);
+
   const handleSearch = useCallback(async (query: string) => {
+    if (usageCount >= DAILY_LIMIT) {
+      setState(prev => ({ ...prev, error: "本日の利用上限に達しました。明日またお試しください。" }));
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null, currentReport: null }));
     try {
       const report = await performDeepResearch(query);
@@ -394,10 +427,11 @@ const App: React.FC = () => {
         currentReport: report,
         loading: false
       }));
+      setUsageCount(prev => prev + 1);
     } catch (err: any) {
       let errorMessage = "予期せぬエラーが発生しました。接続を確認してください。";
       if (err.message && err.message.includes("429")) {
-        errorMessage = "【制限エラー】無料枠の利用制限（リクエスト過多）に達しました。数分待ってから再度お試しください。";
+        errorMessage = "【制限エラー】1分あたりの利用上限を超えました。少し待ってから再度お試しください。";
       }
       setState(prev => ({
         ...prev,
@@ -405,7 +439,7 @@ const App: React.FC = () => {
         error: errorMessage
       }));
     }
-  }, []);
+  }, [usageCount]);
 
   const selectReport = (report: ResearchReport) => {
     setState(prev => ({ ...prev, currentReport: report, error: null }));
@@ -436,9 +470,11 @@ const App: React.FC = () => {
     });
   };
 
+  const remaining = Math.max(0, DAILY_LIMIT - usageCount);
+
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <Header remaining={remaining} />
       <UsageNotice />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 
@@ -448,7 +484,7 @@ const App: React.FC = () => {
           currentId={state.currentReport?.id} 
         />
         <main className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth bg-slate-50/50">
-          <SearchBar onSearch={handleSearch} loading={state.loading} />
+          <SearchBar onSearch={handleSearch} loading={state.loading} remaining={remaining} />
           
           {state.error && (
             <div className="max-w-4xl mx-auto mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
